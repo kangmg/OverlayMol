@@ -54,3 +54,25 @@ wittig.parameters.superimpose_option = 'aa'
 wittig.plot_animation()
 ```
 ![newplot (2)](https://github.com/user-attachments/assets/2743b50f-0992-4617-97a7-df87563d48fd)
+
+## Low level API
+
+```python
+!wget -q https://github.com/kangmg/OverlayMol/blob/main/examples/sn2.xyz
+
+from overlaymol import open_xyz_files, plotly_overlay, superimpose
+
+# config molecules to overlay
+molecules_jsons = open_xyz_files('./sn2.xyz')
+
+# superimpose
+superimposed_molecules_json = superimpose(molecules_jsons)
+
+# plot overlay diagram
+plotly_overlay(
+    xyz_format_jsons=superimposed_molecules_json, 
+    colorby='atom',
+    bgcolor='navy')
+```
+![newplot (3)](https://github.com/user-attachments/assets/bde76a8b-e67b-46b9-b699-ddb80e3cfde3)
+
