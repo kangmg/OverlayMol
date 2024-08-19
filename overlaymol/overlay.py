@@ -140,6 +140,10 @@ def xyz_format_to_json(xyz_coord:str|dict)->dict:
     # converts atomic_symbol to atomic_number
     xyz_lines[:, 0] = np.array(list(element_symbol2atomic_number[symbol] for symbol in xyz_lines[:, 0]))
 
+    # add atomic index
+    index_col = np.arange(1, xyz_lines.shape[0] + 1, 1).reshape(-1, 1)
+    xyz_lines = np.hstack([xyz_lines, index_col])
+
     # json format xyz
     xyz_json = {
         "name": name,
@@ -238,23 +242,23 @@ def superimpose(xyz_format_jsons:list, option="aa", option_param:None|list=None)
             raise ValueError("The `aa` option expects that each coordinates has the same order of atoms. \n Try other options like `sa` or `a`")
 
         # every molecule is overlaid on the first molecule
-        first_molecule = _xyz_format_jsons[0]["coordinate"][:, 1:]
+        first_molecule = _xyz_format_jsons[0]["coordinate"][:, 1:4]
         centroid = np.mean(first_molecule, axis=0)
 
         # center the first(reference) molecule
         first_molecule -= centroid
-        _xyz_format_jsons[0]["coordinate"][:, 1:] = first_molecule
+        _xyz_format_jsons[0]["coordinate"][:, 1:4] = first_molecule
 
         for mol_idx in range(len(_xyz_format_jsons)):
             # center the molecule
-            centroid_mol = np.mean(_xyz_format_jsons[mol_idx]["coordinate"][:, 1:], axis=0)
-            _xyz_format_jsons[mol_idx]["coordinate"][:, 1:] -= centroid_mol
+            centroid_mol = np.mean(_xyz_format_jsons[mol_idx]["coordinate"][:, 1:4], axis=0)
+            _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4] -= centroid_mol
 
             # overlay each molecule on the first molecule
-            _xyz_format_jsons[mol_idx]["coordinate"][:, 1:] = align_xyz(
-                vec1=_xyz_format_jsons[mol_idx]["coordinate"][:, 1:], # molecule to align
+            _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4] = align_xyz(
+                vec1=_xyz_format_jsons[mol_idx]["coordinate"][:, 1:4], # molecule to align
                 vec2=first_molecule, # reference molecule
-                coord=_xyz_format_jsons[mol_idx]["coordinate"][:, 1:] # coordinates to align
+                coord=_xyz_format_jsons[mol_idx]["coordinate"][:, 1:4] # coordinates to align
               )
 
     # atoms ( -a option )
@@ -274,22 +278,22 @@ def superimpose(xyz_format_jsons:list, option="aa", option_param:None|list=None)
             )
 
         # every molecule is overlaid on the first molecule
-        first_molecule_selected_atoms = _xyz_format_jsons[0]["coordinate"][:, 1:][[option_param[0]]][0]
+        first_molecule_selected_atoms = _xyz_format_jsons[0]["coordinate"][:, 1:4][[option_param[0]]][0]
         centroid = np.mean(first_molecule_selected_atoms, axis=0)
 
         # center the first(reference) molecule
-        _xyz_format_jsons[0]["coordinate"][:, 1:] -= centroid
+        _xyz_format_jsons[0]["coordinate"][:, 1:4] -= centroid
 
         for mol_idx in range(len(_xyz_format_jsons)):
             # center the molecule
-            centroid_mol = np.mean(_xyz_format_jsons[mol_idx]["coordinate"][:, 1:][option_param[mol_idx]], axis=0)
-            _xyz_format_jsons[mol_idx]["coordinate"][:, 1:] -= centroid_mol
+            centroid_mol = np.mean(_xyz_format_jsons[mol_idx]["coordinate"][:, 1:4][option_param[mol_idx]], axis=0)
+            _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4] -= centroid_mol
 
             # overlay each molecule on the first molecule
-            _xyz_format_jsons[mol_idx]["coordinate"][:, 1:] = align_xyz(
-                vec1=_xyz_format_jsons[mol_idx]["coordinate"][:, 1:][[option_param[mol_idx]]][0], # molecule to align
+            _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4] = align_xyz(
+                vec1=_xyz_format_jsons[mol_idx]["coordinate"][:, 1:4][[option_param[mol_idx]]][0], # molecule to align
                 vec2=first_molecule_selected_atoms,
-                coord=_xyz_format_jsons[mol_idx]["coordinate"][:, 1:] # coordinates to align
+                coord=_xyz_format_jsons[mol_idx]["coordinate"][:, 1:4] # coordinates to align
               )
 
     # same atom ( -sa option )
@@ -311,22 +315,22 @@ def superimpose(xyz_format_jsons:list, option="aa", option_param:None|list=None)
             raise ValueError("The `aa` option expects that each coordinates has the same order of atoms. \n Try other options like `sa` or `a`")
 
         # every molecule is overlaid on the first molecule
-        first_molecule_selected_atoms = _xyz_format_jsons[0]["coordinate"][:, 1:][[option_param]][0]
+        first_molecule_selected_atoms = _xyz_format_jsons[0]["coordinate"][:, 1:4][[option_param]][0]
         centroid = np.mean(first_molecule_selected_atoms, axis=0)
 
         # center the first(reference) molecule
-        _xyz_format_jsons[0]["coordinate"][:, 1:] -= centroid
+        _xyz_format_jsons[0]["coordinate"][:, 1:4] -= centroid
 
         for mol_idx in range(len(_xyz_format_jsons)):
             # center the molecule
             #centroid_mol = np.mean(_xyz_format_jsons[mol_idx]["coordinate"][:, 1:][[option_param]], axis=0)
-            centroid_mol = np.mean(_xyz_format_jsons[mol_idx]["coordinate"][:, 1:][option_param], axis=0)
-            _xyz_format_jsons[mol_idx]["coordinate"][:, 1:] -= centroid_mol
+            centroid_mol = np.mean(_xyz_format_jsons[mol_idx]["coordinate"][:, 1:4][option_param], axis=0)
+            _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4] -= centroid_mol
             # overlay each molecule on the first molecule
-            _xyz_format_jsons[mol_idx]["coordinate"][:, 1:] = align_xyz(
-                vec1=_xyz_format_jsons[mol_idx]["coordinate"][:, 1:][[option_param]][0], # molecule to align
+            _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4] = align_xyz(
+                vec1=_xyz_format_jsons[mol_idx]["coordinate"][:, 1:4][[option_param]][0], # molecule to align
                 vec2=first_molecule_selected_atoms,
-                coord=_xyz_format_jsons[mol_idx]["coordinate"][:, 1:] # coordinates to align
+                coord=_xyz_format_jsons[mol_idx]["coordinate"][:, 1:4] # coordinates to align
               )
     elif option==None:
         return xyz_format_jsons
@@ -357,7 +361,7 @@ def xyz2molecular_graph(xyz_format_jsons:list, covalent_radius_percent:float=108
     # get molecular connetivity & bond length
     for mol_idx in range(len(xyz_format_jsons)):
         # get interatomic distance(L2 norm) matrix
-        atomic_coordinates = xyz_format_jsons[mol_idx]["coordinate"][:, 1:] # (N, 3)
+        atomic_coordinates = xyz_format_jsons[mol_idx]["coordinate"][:, 1:4] # (N, 3)
         L2_matrix = squareform(pdist(atomic_coordinates, 'euclidean')) # (N, N)
 
         # get sum of atomic radii matrix

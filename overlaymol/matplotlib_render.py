@@ -174,7 +174,7 @@ def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements
         for mol_idx in range(len(_xyz_format_jsons)):
             color = next(color_cycle)
             # plot atoms
-            ax.scatter(*_xyz_format_jsons[mol_idx]["coordinate"][:, 1:].T,
+            ax.scatter(*_xyz_format_jsons[mol_idx]["coordinate"][:, 1:4].T,
                        s=np.log10(atom_scaler/num_atom_xyz),
                        alpha=alpha_atoms,
                        c=color,
@@ -186,8 +186,8 @@ def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements
             for bond in bonds:
                 bond = bond.astype(int) - 1 # internally idx start with 0
                 # convert symbol to atomic nubmer
-                atom_1_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:][bond[0]]
-                atom_2_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:][bond[1]]
+                atom_1_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4][bond[0]]
+                atom_2_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4][bond[1]]
                 ax.plot(*np.array([atom_1_coord, atom_2_coord]).T,
                         linewidth=np.log10(bond_scaler/num_atom_xyz),
                         alpha=alpha_bonds,
@@ -211,7 +211,7 @@ def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements
         # plot element-wise
         for element in elements:
             element_coordinates = all_coordinates[all_coordinates[:, 0].astype(int) == element]
-            ax.scatter(*element_coordinates[:, 1:].T, s=np.log10(atom_scaler/num_atom_xyz), alpha=alpha_atoms, c=atomic_number2hex[element])
+            ax.scatter(*element_coordinates[:, 1:4].T, s=np.log10(atom_scaler/num_atom_xyz), alpha=alpha_atoms, c=atomic_number2hex[element])
 
         # plot bonds
         for mol_idx in range(len(_xyz_format_jsons)):
@@ -219,8 +219,8 @@ def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements
             for bond in bonds:
                 bond = bond.astype(int) - 1 # internally idx start with 0
                 # convert symbol to atomic nubmer
-                atom_1_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:][bond[0]]
-                atom_2_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:][bond[1]]
+                atom_1_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4][bond[0]]
+                atom_2_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4][bond[1]]
                 ax.plot(*np.array([atom_1_coord, atom_2_coord]).T, linewidth=np.log10(bond_scaler/num_atom_xyz), alpha=alpha_bonds, c="grey")
 
     else:

@@ -75,6 +75,9 @@ def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements
     atom_scaler = kwargs.get("atom_scaler", 4e1) # sphere radius for atom view, change exponent
     bond_scaler = kwargs.get("bond_scaler", 7e4) # cylinder radius for bond view, change exponent
     legend = kwargs.get("legend", False) # add legend
+    show_index = kwargs.get("show_index", False) # show atomic index
+    index_color = kwargs.get("index_color", 'red') # atomic index color
+    index_size = kwargs.get("index_size", 12) # atomic index size
     bgcolor = kwargs.get("bgcolor", 'black') # background color
 
     # copy xyz_format_jsons
@@ -148,12 +151,18 @@ def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements
                 x=_xyz_format_jsons[mol_idx]["coordinate"][:, 1],
                 y=_xyz_format_jsons[mol_idx]["coordinate"][:, 2],
                 z=_xyz_format_jsons[mol_idx]["coordinate"][:, 3],
-                mode='markers',
+                mode='markers+text',
                 opacity=alpha_atoms,
                 marker=dict(size=atom_size, color=color),
                 #name=_xyz_format_jsons[mol_idx]["name"]
-                name=f'{_xyz_format_jsons[mol_idx]["name"]} atoms'
-            ))
+                name=f'{_xyz_format_jsons[mol_idx]["name"]} atoms',
+                text=_xyz_format_jsons[mol_idx]["coordinate"][:, 4].astype(int).astype(str) if show_index else None,
+                textposition="top center" if show_index else None,
+                textfont=dict(
+                    size=index_size,
+                    color=index_color
+                    ) if show_index else None,
+                ))
             legend_group_namegroup = _xyz_format_jsons[mol_idx]["name"]
 
             # Add bonds to plot
@@ -161,8 +170,8 @@ def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements
             first_bond = True
             for bond in bonds:
                 bond = bond.astype(int) - 1
-                atom_1_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:][bond[0]]
-                atom_2_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:][bond[1]]
+                atom_1_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4][bond[0]]
+                atom_2_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4][bond[1]]
                 fig.add_trace(go.Scatter3d(
                     x=[atom_1_coord[0], atom_2_coord[0]],
                     y=[atom_1_coord[1], atom_2_coord[1]],
@@ -180,6 +189,7 @@ def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements
     elif colorby == "atom":
         # `legend` is only working when colorby='molecule'.
         if legend: print("\033[31m[WARNING]\033[0m", f"`legend`=True is not a applicable when colorby='atom'.")
+        if show_index: print("\033[31m[WARNING]\033[0m", f"`show_indice`=True is not a applicable when colorby='atom'.")
 
         # plot atoms
         all_coordinates = np.vstack(list(json["coordinate"] for json in _xyz_format_jsons))
@@ -236,6 +246,8 @@ def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements
     )
 
     fig.show()
+
+
 
 
 def plot_animation(xyz_format_jsons:list, colorby:str="molecule", exclude_elements:list=None, exclude_atomic_idx:list=None, cmap:str=None, covalent_radius_percent:float=108., **kwargs):
