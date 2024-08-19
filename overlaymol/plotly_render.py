@@ -6,6 +6,7 @@ from copy import deepcopy
 from .overlay import xyz2molecular_graph
 from .data import atomic_number2element_symbol, atomic_number2hex
 from .overlay import open_xyz_files, superimpose
+from collections.abc import Iterable
 
 
 def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements:list=None, exclude_atomic_idx:list=None, cmap:str=None, covalent_radius_percent:float=108., **kwargs):
