@@ -3,6 +3,20 @@ Overlay and align molecular structures for comparison and analysis.
 
 <br>
 
+## Installation
+> pip
+```bash
+pip install -q git+https://github.com/kangmg/OverlayMol.git
+```
+> git clone
+```bash
+git clone https://github.com/kangmg/OverlayMol.git
+cd OverlayMol
+pip install .
+```
+
+<br>
+
 ## Overlay Diagram
 
 ```python
