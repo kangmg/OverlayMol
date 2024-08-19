@@ -492,4 +492,145 @@ def plot_animation(xyz_format_jsons:list, colorby:str="molecule", exclude_elemen
         showlegend=True if legend else False
     )
 
+class Parameters:
+    def __init__(self, parameters):
+        self._parameters = parameters
+
+    def __getattr__(self, name):
+        if name in self._parameters:
+            return self._parameters[name]
+        raise AttributeError(f"parameters has no attribute '{name}'")
+
+    def __setattr__(self, name, value):
+        if name == "_parameters":
+            super().__setattr__(name, value)
+        else:
+            self._parameters[name] = value
+
+    def __repr__(self):
+        from pprint import pformat
+        return pformat(self._parameters, indent=0)
+
+class OverlayMolecules:
+    """
+    A class to overlay molecules with customizable parameters.
+    """
+    np.set_printoptions(precision=7, suppress=True)
+
+    # default parameters
+    default_parameters = {
+        # coordinates
+        "superimpose_option": "aa",
+        "superimpose_option_param": None,
+
+        # visualization setting
+        "colorby": "molecule",
+        "exclude_elements": None,
+        "exclude_atomic_idx": None,
+        "covalent_radius_percent": 108.,
+
+        # plot setting
+        "alpha_atoms": 0.55,
+        "alpha_bonds": 0.35,
+        "atom_scaler": 4e1,
+        "bond_scaler": 7e4,
+        "cmap": 'Plotly3',
+        "legend": False,
+        "bgcolor": 'black',
+        "show_index": False,
+        "index_color": "red",
+        "index_size": 12
+    }
+
+    def __init__(self, **kwargs):
+        self.xyz_format_jsons = None
+        self.superimposed_jsons = None
+
+        self.parameters = Parameters(
+            {**OverlayMolecules.default_parameters, **kwargs}
+            )
+        
+    def set_molecules(self, filenames:Iterable|str):
+        '''
+        Description
+        -----------
+        Open and read XYZ files, extract headers and atomic coordinates.
+
+        Parameters
+        ----------
+        filenames : str or list
+            str : xyz format traj file path
+            list : list of xyz format strings or file paths
+
+        Usage
+        -----
+        >>> myclass = OverlayMolecules()
+        >>>
+        >>> # list of dictinoaries #
+        >>> xyz_files = [
+        >>>     {'name': 'reactant', 'coordinate': 'sn2_reac.xyz'},
+        >>>     {'name': 'TS', 'coordinate': 'sn2_TS.xyz'},
+        >>>     {'name': 'prod', 'coordinate': 'sn2_prod'}
+        >>>  ]
+        >>> myclass.set_molecules(xyz_files)
+        >>> 
+        >>> # list of strings #
+        >>> myclass.set_molecules(['reac.xyz', 'TS.xyz', 'prod.xyz'])
+        >>> 
+        >>> # traj file #
+        >>> myclass.set_molecules('sn2_traj.xyz')
+        '''
+        self.xyz_format_jsons = open_xyz_files(filenames)
+        self.superimposed_jsons = self._superimpose(self.xyz_format_jsons)
+
+    def _superimpose(self, xyz_format_jsons):
+        return superimpose(xyz_format_jsons, self.parameters.superimpose_option, self.parameters.superimpose_option_param)
+
+    
+    def plot_overlay(self):
+        """
+        Description
+        -----------
+        Visualization of molecular structures in 3D using Plotly.
+        """
+        if self.superimposed_jsons == None: raise ValueError("Please set molecules first.")
+
+        plot_overlay(
+            xyz_format_jsons=self.superimposed_jsons,
+            colorby=self.parameters.colorby,
+            exclude_elements=self.parameters.exclude_elements,
+            exclude_atomic_idx=self.parameters.exclude_atomic_idx,
+            cmap=self.parameters.cmap,
+            covalent_radius_percent=self.parameters.covalent_radius_percent,
+            alpha_atoms=self.parameters.alpha_atoms,
+            alpha_bonds=self.parameters.alpha_bonds,
+            atom_scaler=self.parameters.atom_scaler,
+            bond_scaler=self.parameters.bond_scaler,
+            legend=self.parameters.legend,
+            bgcolor=self.parameters.bgcolor,
+            show_index=self.parameters.show_index,
+            index_color=self.parameters.index_color,
+            index_size=self.parameters.index_size
+            )
+        
+    def plot_animation(self):
+        """
+        Now in development
+        """
+        if self.superimposed_jsons == None: raise ValueError("Please set molecules first.")
+
+        plot_animation(
+            xyz_format_jsons=self.superimposed_jsons,
+            colorby=self.parameters.colorby,
+            exclude_elements=self.parameters.exclude_elements,
+            exclude_atomic_idx=self.parameters.exclude_atomic_idx,
+            cmap=self.parameters.cmap,
+            covalent_radius_percent=self.parameters.covalent_radius_percent,
+            alpha_atoms=self.parameters.alpha_atoms,
+            alpha_bonds=self.parameters.alpha_bonds,
+            atom_scaler=self.parameters.atom_scaler,
+            bond_scaler=self.parameters.bond_scaler,
+            legend=self.parameters.legend
+        )
+
     fig.show()
