@@ -493,6 +493,8 @@ def plot_animation(xyz_format_jsons:list, colorby:str="molecule", exclude_elemen
         ),
         showlegend=True if legend else False
     )
+    
+    fig.show()
 
 class Parameters:
     def __init__(self, parameters):
@@ -634,5 +636,3 @@ class OverlayMolecules:
             bond_scaler=self.parameters.bond_scaler,
             legend=self.parameters.legend
         )
-
-    fig.show()
