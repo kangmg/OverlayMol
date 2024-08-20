@@ -547,15 +547,15 @@ class OverlayMolecules:
     }
 
     def __init__(self, filenames:Iterable|str=None, **kwargs):
+        # default parameters
+        self.parameters = Parameters({**OverlayMolecules.default_parameters, **kwargs})
+
+        self.xyz_format_jsons = None
+        self.superimposed_jsons = None
+        
+        # config molecules
         if filenames is not None:
             self.set_molecules(filenames=filenames)
-        else:
-            self.xyz_format_jsons = None
-            self.superimposed_jsons = None
-
-        self.parameters = Parameters(
-            {**OverlayMolecules.default_parameters, **kwargs}
-            )
         
     def set_molecules(self, filenames:Iterable|str):
         '''
