@@ -546,9 +546,12 @@ class OverlayMolecules:
         "index_size": 12
     }
 
-    def __init__(self, **kwargs):
-        self.xyz_format_jsons = None
-        self.superimposed_jsons = None
+    def __init__(self, filenames:Iterable|str=None, **kwargs):
+        if filenames is not None:
+            self.set_molecules(filenames=filenames)
+        else:
+            self.xyz_format_jsons = None
+            self.superimposed_jsons = None
 
         self.parameters = Parameters(
             {**OverlayMolecules.default_parameters, **kwargs}
@@ -588,6 +591,8 @@ class OverlayMolecules:
         self.superimposed_jsons = self._superimpose(self.xyz_format_jsons)
 
     def _superimpose(self, xyz_format_jsons):
+        """superimpose molecular coordinates
+        """
         return superimpose(xyz_format_jsons, self.parameters.superimpose_option, self.parameters.superimpose_option_param)
 
     
