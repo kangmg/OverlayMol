@@ -11,46 +11,54 @@ from collections.abc import Iterable
 
 def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements:list=None, exclude_atomic_idx:list=None, cmap:str=None, covalent_radius_percent:float=108., **kwargs):
     """
-    Description
-    -----------
-    Visualization of molecular structures in 3D using Plotly.
+    Visualizes molecular structures in 3D using Plotly.
 
     Parameters
     ----------
-    - xyz_format_jsons : list
-        list of json format xyz
+    xyz_format_jsons : list
+        A list of dictionaries where each dictionary contains molecular data in JSON format with keys:
+        - "name": str, the name or identifier for the molecule.
+        - "n_atoms": int, the number of atoms in the molecule.
+        - "coordinate": ndarray, the atomic coordinates with columns for atomic number, x, y, z, and optionally index.
+        - "adjacency_matrix": ndarray, the matrix representing the connectivity of the molecule
+        - "bond_length_table": ndarray, the table of bond lengths with columns | atom_1_idx | atom_2_idx | distance |
 
-    - colorby : str
-        supported options : ["molecule", "atom"]
-        - molecule  : color by molecule
-        - atom      : color by atom
-
-    - exclude_elements : list
-        list of elements to exclude from visualization. e.g. ["H"]
-
-    - exclude_atomic_idx : list
-        list of atoms to exclude from visualization. e.g. [1, 3, 4]
-
-    - cmap : str or list
-        plotly colormap to use for coloring.
-        Supported options : [  ]
-        Refer)
-        https://plotly.com/python/builtin-colorscales/
-
-        or
-
-        iterable color list
-        e.g. ['red', 'blue', 'green']
-        Refer)
-        https://community.plotly.com/t/plotly-colours-list/11730/3
-
-
-    - covalent_radius_percent : float
-        resize covalent radii by this percent
-        default : 108%
+    colorby : str, optional, default="molecule"
+        Specifies how to color the molecules. Options:
+        - "molecule": Color by molecule.
+        - "atom": Color by element.
+	
+    exclude_elements : list, optional
+        List of element symbols to exclude from visualization. e.g., ["H"] to exclude hydrogen.
+	
+    exclude_atomic_idx : list, optional
+        List of atomic indices to exclude from visualization. Atomic index starts with 1. e.g. [1, 3, 4]
+	
+	cmap : str or list, optional
+		str : A Plotly colormap name (e.g., 'Viridis', 'Plotly3') used to color the molecules.
+			- Refer to the Plotly documentation : https://plotly.com/python/builtin-colorscales/
+		list : A list of color names or hex codes used for manual coloring (e.g., ['red', 'blue', 'green']).
+			- Refer to the Plotly color options : https://community.plotly.com/t/plotly-colours-list/11730/3
+	
+	covalent_radius_percent : float, optional
+		A percentage value used to scale the covalent radii for determining bonding (default is 108%).
+	
+    **kwargs
+        Additional keyword arguments for customization:
+        - alpha_atoms: float, optional, default=0.55, opacity of atoms.
+        - alpha_bonds: float, optional, default=0.35, opacity of bonds.
+        - atom_scaler: float, optional, default=4e1, scale factor for atom sphere radius.
+        - bond_scaler: float, optional, default=7e4, scale factor for bond cylinder radius.
+        - legend: bool, optional, default=False, whether to show legend.
+        - show_index: bool, optional, default=False, whether to show atomic indices.
+        - index_color: str, optional, default='red', color of atomic indices.
+        - index_size: int, optional, default=12, size of atomic indices text.
+        - bgcolor: str, optional, default='black', background color of the plot.
 
     Returns
     -------
+    None
+        Displays the 3D plot using Plotly.
     """
     def _get_colors(cmap:str|list, n:int):
         """get n size color list from plotly colormap
@@ -497,6 +505,24 @@ def plot_animation(xyz_format_jsons:list, colorby:str="molecule", exclude_elemen
     fig.show()
 
 class Parameters:
+    """
+    A simple class to manage parameters, allowing dictionary keys to be accessed like attributes.
+
+    Example
+    -------
+    >>> params = Parameters({
+            "cmap": 'Plotly3',
+            "legend": False,
+            "bgcolor": 'black'
+        })
+    >>> print(params.cmap)
+    'Plotly3'
+    >>> print(params.legend)
+    False
+    >>> params.legend = True
+    >>> print(params)
+    {'cmap': 'Plotly3', 'legend': True, 'bgcolor': 'black'}
+    """
     def __init__(self, parameters):
         self._parameters = parameters
 
@@ -518,6 +544,45 @@ class Parameters:
 class OverlayMolecules:
     """
     A class to overlay molecules with customizable parameters.
+    """
+    
+    """
+    A class to overlay molecules with customizable parameters.
+
+    Attributes
+    ----------
+    parameters : Parameters
+        A Parameters instance containing the configuration for overlaying molecules.
+
+    xyz_format_jsons : list
+        A list of JSON formatted molecular data.
+
+    superimposed_jsons : list
+        A list of superimposed molecular data based on the configured options.
+
+    Methods
+    -------
+    set_molecules(filenames)
+        Opens and reads XYZ files, extracting headers and atomic coordinates.
+
+    plot_overlay()
+        Visualizes the superimposed molecular structures in 3D using Plotly.
+
+    plot_animation()
+        (Currently in development) Creates an animated visualization of molecular structures.
+    
+    Example
+    -------
+    >>> # config molecules
+    >>> overlayplot = OverlayMolecules(filenames=['molecule1.xyz', 'molecule2.xyz'])
+    >>> 
+    >>> # adjust options
+    >>> overlayplot.parameters.cmap = 'Viridis'
+    >>> overlayplot.parameters.legend = True
+    >>>
+    >>> # plot
+    >>> overlayplot.plot_overlay()
+    >>> overlayplot.plot_animation()  # Note: This is under development
     """
     np.set_printoptions(precision=7, suppress=True)
 
@@ -547,6 +612,16 @@ class OverlayMolecules:
     }
 
     def __init__(self, filenames:Iterable|str=None, **kwargs):
+        """
+        Initializes the OverlayMolecules instance with optional file names and parameters.
+
+        Parameters
+        ----------
+        filenames : str or list of str, optional
+            File paths or list of file paths to XYZ files to initialize with.
+        **kwargs : keyword arguments
+            Optional parameters to customize the overlay behavior.
+        """
         # default parameters
         self.parameters = Parameters({**OverlayMolecules.default_parameters, **kwargs})
 
@@ -559,9 +634,7 @@ class OverlayMolecules:
         
     def set_molecules(self, filenames:Iterable|str):
         '''
-        Description
-        -----------
-        Open and read XYZ files, extract headers and atomic coordinates.
+        Opens and reads XYZ files, extracting atomic coordinates.
 
         Parameters
         ----------
@@ -591,16 +664,24 @@ class OverlayMolecules:
         self.superimposed_jsons = self._superimpose(self.xyz_format_jsons)
 
     def _superimpose(self, xyz_format_jsons):
-        """superimpose molecular coordinates
+        """
+        Superimposes molecular coordinates based on the configured options.
+
+        Parameters
+        ----------
+        xyz_format_jsons : list of dict
+            List of JSON formatted molecular data.
+
+        Returns
+        -------
+        list of dict
+            Superimposed molecular data.
         """
         return superimpose(xyz_format_jsons, self.parameters.superimpose_option, self.parameters.superimpose_option_param)
 
     
     def plot_overlay(self):
-        """
-        Description
-        -----------
-        Visualization of molecular structures in 3D using Plotly.
+        """Visualizes the superimposed molecular structures in 3D using Plotly.
         """
         if self.superimposed_jsons == None: raise ValueError("Please set molecules first.")
 
