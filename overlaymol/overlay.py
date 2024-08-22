@@ -403,7 +403,7 @@ def xyz2molecular_graph(xyz_format_jsons:list, covalent_radius_percent:float=108
         """resize covalent radius
         """
         radius = covalent_radii[element]
-        radius = (radius * (percent / 100))
+        radius *= (percent / 100)
         return radius
 
     # get molecular connetivity & bond length
