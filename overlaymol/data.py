@@ -1,3 +1,24 @@
+"""
+data.py - Molecular Data Module
+===============================
+
+This module contains essential data related to molecular modeling. The data includes:
+
+1. Covalent Radii (covalent_radii):
+   - A dictionary mapping chemical element symbols to their covalent radii in Ångströms.
+
+2. Periodic Table (periodic_table):
+   - A list representing the periodic table, where each index corresponds to an atomic number and the value is the element's symbol.
+
+3. Element Symbol Mapping:
+   - `atomic_number2element_symbol`: A dictionary mapping atomic numbers to element symbols.
+   - `element_symbol2atomic_number`: A dictionary mapping element symbols to atomic numbers.
+
+4. Element Colors (atomic_number2hex):
+   - A dictionary mapping atomic numbers to their corresponding RGB hex color codes for visualization.
+"""
+
+
 #covalent radii from Alvarez (2008)
 #DOI: 10.1039/b801115j
 covalent_radii = {
