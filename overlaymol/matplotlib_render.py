@@ -8,16 +8,13 @@ from .data import atomic_number2element_symbol, atomic_number2hex
 
 def set_axes_equal(ax)->Axes3D:
     """
-    Description
-    -----------
-    Make axes of 3D plot have equal scale so that spheres appear as spheres,
-    cubes as cubes, etc. This is one possible solution to Matplotlib's
-    ax.set_aspect('equal') and ax.axis('equal') not working for 3D.
+    Adjust the scaling of a 3D plot so that all axes are equally proportioned, 
+    ensuring that geometric shapes (e.g., spheres, cubes) maintain their correct proportions.
 
     Parameters
     ----------
     ax : Axes3D
-        A Matplotlib 3D axis object.
+        The Matplotlib 3D axis object to be adjusted.
 
     Note
     ----
@@ -47,39 +44,44 @@ def set_axes_equal(ax)->Axes3D:
 
 def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements:list=None, exclude_atomic_idx:list=None, cmap:str|list=None, covalent_radius_percent:float=108., **kwargs):
     """
-    Description
-    -----------
+    Visualizes molecular structures in 3D using Plotly.
 
     Parameters
     ----------
-    - xyz_format_jsons : list
-        list of json format xyz
+    xyz_format_jsons : list
+        A list of dictionaries where each dictionary contains molecular data in JSON format with keys:
+        - "name": str, the name or identifier for the molecule.
+        - "n_atoms": int, the number of atoms in the molecule.
+        - "coordinate": ndarray, the atomic coordinates with columns for atomic number, x, y, z, and optionally index.
+        - "adjacency_matrix": ndarray, the matrix representing the connectivity of the molecule
+        - "bond_length_table": ndarray, the table of bond lengths with columns | atom_1_idx | atom_2_idx | distance |
 
-    - colorpy : str
-        supported options : ["molecule", "atom"]
-        - molecule  : color by molecule
-        - atom      : color by atom
-
-    - exclude_elements : list
-        list of elements to exclude from visualization. e.g. ["H"]
-
-    - exclude_atomic_idx : list
-        list of atoms to exclude from visualization. e.g. [1, 3, 4]
-
-    - cmap : str
-        Matplotlib colormap to use for coloring.
-        Supported options : [ 'Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds',
-                              'YlOrBr', 'YlOrRd', 'OrRd', 'PuRd', 'RdPu', 'BuPu', 'GnBu',
-                              'PuBu', 'YlGnBu', 'PuBuGn', 'BuGn', 'YlGn', etc . . . ]
-        Refer)
-        https://matplotlib.org/stable/users/explain/colors/colormaps.html
-
-    - covalent_radius_percent : float
-        resize covalent radii by this percent
-        default : 108%
-
-    Returns
-    -------
+    colorby : str, optional, default="molecule"
+        Specifies how to color the molecules. Options:
+        - "molecule": Color by molecule.
+        - "atom": Color by element.
+	
+    exclude_elements : list, optional
+        List of element symbols to exclude from visualization. e.g., ["H"] to exclude hydrogen.
+	
+    exclude_atomic_idx : list, optional
+        List of atomic indices to exclude from visualization. Atomic index starts with 1. e.g. [1, 3, 4]
+	
+	cmap : str or list, optional
+		str : A Matplotlib colormap name (e.g., 'Greys', 'Purples', 'Blues' etc..) used to color the molecules.
+			- Refer to the Matplotlib documentation : https://matplotlib.org/stable/users/explain/colors/colormaps.html
+		list : A list of color names for manual coloring (e.g., ['b', 'g', 'r']).
+	
+	covalent_radius_percent : float, optional
+		A percentage value used to scale the covalent radii for determining bonding (default is 108%).
+	
+    **kwargs
+        Additional keyword arguments for customization:
+        - alpha_atoms: float, optional, default=0.55, opacity of atoms.
+        - alpha_bonds: float, optional, default=0.35, opacity of bonds.
+        - atom_scaler: float, optional, default=4e1, scale factor for atom sphere radius.
+        - bond_scaler: float, optional, default=7e4, scale factor for bond cylinder radius.
+        - legend: bool, optional, default=False, whether to show legend.
     """
     def _get_cmap(cmap:str|list):
         """set matplotlib colormap
