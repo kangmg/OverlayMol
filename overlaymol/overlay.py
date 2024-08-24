@@ -84,20 +84,25 @@ def xyz_format_to_json(xyz_coord:str|dict)->dict:
     Parameters
     ----------
     xyz_coord : str or dict
-        str : XYZ format string or a file path to an XYZ format file.
-        dict : A dictionary with the keys:
-            - "name": str, representing the molecule's name.
-            - "coordinate": str, representing the coordinates in XYZ format or file path
+        str:
+            An XYZ format string or a file path to an XYZ format file.
+        dict:
+            A dictionary with the following keys:
+            - "name": str
+                The name of the molecule.
+            - "coordinate": str
+                The coordinates in XYZ format or a file path to an XYZ format file.
 
     Returns
     -------
     xyz_json : dict
-        A JSON-like dictionary containing the parsed XYZ data:
-        {
-            "name": str,          # Molecule name
-            "n_atoms": int,       # Number of atoms
-            "coordinate": ndarray # Array of atomic coordinates
-        }
+        A JSON-like dictionary containing the parsed XYZ data with the following structure:
+        - "name": str
+            Molecule name.
+        - "n_atoms": int
+            Number of atoms.
+        - "coordinate": ndarray
+            Array of atomic coordinates.
 
     Usage
     -----
@@ -162,27 +167,30 @@ def open_xyz_files(xyz_coordinates:str|list)->list:
     """
     Opens and reads XYZ files, extracting headers and atomic coordinates, and converts them to a JSON-like format.
 
-    This function can handle either a single trajectory file containing multiple XYZ traj or a list of XYZ file strings or dict. 
+    This function can handle either a single trajectory file containing multiple XYZ frames or a list of XYZ file strings or dictionaries. 
     It extracts the relevant information from each XYZ file and converts it to a JSON-like format.
 
     Parameters
     ----------
     xyz_coordinates : str or list
-        str : A file path to an XYZ trajectory file containing multiple frames.
-        list : A list of str or dict. Refer the docs stirng of `xyz_format_to_json`:
+        str:
+            A file path to an XYZ trajectory file containing multiple frames.
+        list:
+            A list of str or dict. Refer to the docstring of `xyz_format_to_json`:
             - dict:
                 - 'name': str, the name or identifier for the XYZ structure.
                 - 'coordinate': str, the file path to an XYZ format file or the XYZ format string itself.
             - str:
-                - file path or XYZ format string 
+                The file path or XYZ format string.
 
     Returns
     -------
     xyz_format_jsons : list
         A list of dictionaries in JSON-like format representing the parsed XYZ files. Each dictionary contains:
-            - "name": str, the name or identifier for the XYZ structure.
-            - "n_atoms": int, the number of atoms in the structure.
-            - "coordinate": ndarray, the atomic coordinates and atomic numbers.
+        - "name": str, the name or identifier for the XYZ structure.
+        - "n_atoms": int, the number of atoms in the structure.
+        - "coordinate": ndarray, the atomic coordinates and atomic numbers.
+
 
     Usage
     -----
