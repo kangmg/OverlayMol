@@ -17,19 +17,19 @@ def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements
     ----------
     xyz_format_jsons : list
         A list of dictionaries where each dictionary contains molecular data in JSON format with keys:
-        - "name": str, the name or identifier for the molecule.
-        - "n_atoms": int, the number of atoms in the molecule.
-        - "coordinate": ndarray, the atomic coordinates with columns for atomic number, x, y, z, and optionally index.
-        - "adjacency_matrix": ndarray, the matrix representing the connectivity of the molecule
-        - "bond_length_table": ndarray, the table of bond lengths with columns | atom_1_idx | atom_2_idx | distance |
+        - 'name': str, the name or identifier for the molecule.
+        - 'n_atoms': int, the number of atoms in the molecule.
+        - 'coordinate': ndarray, the atomic coordinates with columns for atomic number, x, y, z, and optionally index.
+        - 'adjacency_matrix': ndarray, the matrix representing the connectivity of the molecule
+        - 'bond_length_table': ndarray, the table of bond lengths with columns | atom_1_idx | atom_2_idx | distance |
 
-    colorby : str, optional, default="molecule"
+    colorby : str, optional, default='molecule'
         Specifies how to color the molecules. Options:
-        - "molecule": Color by molecule.
-        - "atom": Color by element.
+        - 'molecule': Color by molecule.
+        - 'atom': Color by element.
 	
     exclude_elements : list, optional
-        List of element symbols to exclude from visualization. e.g., ["H"] to exclude hydrogen.
+        List of element symbols to exclude from visualization. e.g., ['H'] to exclude hydrogen.
 	
     exclude_atomic_idx : list, optional
         List of atomic indices to exclude from visualization. Atomic index starts with 1. e.g. [1, 3, 4]
@@ -45,15 +45,24 @@ def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements
 	
     **kwargs
         Additional keyword arguments for customization:
-        - alpha_atoms: float, optional, default=0.55, opacity of atoms.
-        - alpha_bonds: float, optional, default=0.35, opacity of bonds.
-        - atom_scaler: float, optional, default=4e1, scale factor for atom sphere radius.
-        - bond_scaler: float, optional, default=7e4, scale factor for bond cylinder radius.
-        - legend: bool, optional, default=False, whether to show legend.
-        - show_index: bool, optional, default=False, whether to show atomic indices.
-        - index_color: str, optional, default='red', color of atomic indices.
-        - index_size: int, optional, default=12, size of atomic indices text.
-        - bgcolor: str, optional, default='black', background color of the plot.
+        - alpha_atoms: float, optional, default=0.55 
+		Opacity of atoms.
+        - alpha_bonds: float, optional, default=0.35 
+		Opacity of bonds.
+        - atom_scaler: float, optional, default=4e1
+		Scale factor for atom sphere radius.
+        - bond_scaler: float, optional, default=7e4
+		Scale factor for bond cylinder radius.
+        - legend: bool, optional, default=False
+		Whether to show legend.
+        - show_index: bool, optional, default=False
+		Whether to show atomic indices.
+        - index_color: str, optional, default='red'
+		Color of atomic indices.
+        - index_size: int, optional, default=12
+		Size of atomic indices text.
+        - bgcolor: str, optional, default='black'
+		Background color of the plot.
 
     Returns
     -------
