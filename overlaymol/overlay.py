@@ -97,11 +97,11 @@ def xyz_format_to_json(xyz_coord:str|dict)->dict:
     -------
     xyz_json : dict
         A JSON-like dictionary containing the parsed XYZ data with the following structure:
-        - "name": str
+        - 'name': str
             Molecule name.
-        - "n_atoms": int
+        - 'n_atoms': int
             Number of atoms.
-        - "coordinate": ndarray
+        - 'coordinate': ndarray
             Array of atomic coordinates.
 
     Usage
@@ -187,9 +187,9 @@ def open_xyz_files(xyz_coordinates:str|list)->list:
     -------
     xyz_format_jsons : list
         A list of dictionaries in JSON-like format representing the parsed XYZ files. Each dictionary contains:
-        - "name": str, the name or identifier for the XYZ structure.
-        - "n_atoms": int, the number of atoms in the structure.
-        - "coordinate": ndarray, the atomic coordinates and atomic numbers.
+        - 'name': str, the name or identifier for the XYZ structure.
+        - 'n_atoms': int, the number of atoms in the structure.
+        - 'coordinate': ndarray, the atomic coordinates and atomic numbers.
 
 
     Usage
@@ -239,18 +239,18 @@ def superimpose(xyz_format_jsons:list, option="aa", option_param:None|list=None)
         - "n_atoms": int, the number of atoms in the molecule.
         - "coordinate": ndarray, the atomic coordinates and atomic numbers.
 
-    option : str, optional, default="aa"
-        Alignment option. Supported options : ["aa", "sa", "a"]
-        - "aa" : Align `all atoms`. Assumes that all molecules have atoms in the same order.
-        - "sa" : Align based on the `same atoms` across molecules using the indices provided in `option_param`.
-        - "a"  : Align specific `atoms` based on indices provided in `option_param`.
+    option : str, optional, default='aa'
+        Alignment option. Supported options : ['aa', 'sa', 'a']
+        - 'aa' : Align `all atoms`. Assumes that all molecules have atoms in the same order.
+        - 'sa' : Align based on the `same atoms` across molecules using the indices provided in `option_param`.
+        - 'a'  : Align specific `atoms` based on indices provided in `option_param`.
 
     option_param : list, optional, default=None
         Parameters specific to the selected alignment option.
         - Atomic index starts with 1.
-        - For option="aa": None.
-        - For option="sa": A list of atom indices. e.g. [1, 2, 3]
-        - For option="a": A list of lists. e.g. [[1, 2, 3], [4, 5, 6]] # same order as xyz files
+        - For option='aa': None.
+        - For option='sa': A list of atom indices. e.g. [1, 2, 3]
+        - For option='a': A list of lists. e.g. [[1, 2, 3], [4, 5, 6]] # same order as xyz files
 
     Returns
     -------
@@ -265,7 +265,7 @@ def superimpose(xyz_format_jsons:list, option="aa", option_param:None|list=None)
     >>>     {'name': 'prod', 'coordinate': 'sn2_prod.xyz'}
     >>> ]
     >>> xyz_format_jsons = open_xyz_files(xyz_files)
-    >>> superimposed_jsons = superimpose(xyz_format_jsons, option="sa", option_param=[1, 2, 5])
+    >>> superimposed_jsons = superimpose(xyz_format_jsons, option='sa', option_param=[1, 2, 5])
     """
     # copy xyz_format_jsons
     _xyz_format_jsons = deepcopy(xyz_format_jsons)
@@ -389,9 +389,9 @@ def xyz2molecular_graph(xyz_format_jsons:list, covalent_radius_percent:float=108
     ----------
     xyz_format_jsons : list
         A list of dictionaries, each representing a molecular coordinate in JSON format. Each dictionary contains:
-        - "name": str, the name or identifier for the molecule.
-        - "n_atoms": int, the number of atoms in the molecule.
-        - "coordinate": ndarray, the atomic coordinates and atomic numbers.
+        - 'name': str, the name or identifier for the molecule.
+        - 'n_atoms': int, the number of atoms in the molecule.
+        - 'coordinate': ndarray, the atomic coordinates and atomic numbers.
 
     covalent_radius_percent : float, optional, default=108.0
         The percentage of the standard covalent radii to use for determining bond distances.
@@ -400,8 +400,8 @@ def xyz2molecular_graph(xyz_format_jsons:list, covalent_radius_percent:float=108
     -------
     None
         The function updates the `xyz_format_jsons` list in place by adding:
-        - "adjacency_matrix": ndarray, the adjacency matrix representing bonds between atoms.
-        - "bond_length_table": ndarray, a table of bond lengths with columns ["atom_1_idx", "atom_2_idx", "distance"].
+        - 'adjacency_matrix': ndarray, the adjacency matrix representing bonds between atoms.
+        - 'bond_length_table': ndarray, a table of bond lengths with columns ['atom_1_idx', 'atom_2_idx', 'distance'].
 
     Notes
     -----
