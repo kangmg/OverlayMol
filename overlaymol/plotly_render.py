@@ -553,10 +553,6 @@ class Parameters:
 class OverlayMolecules:
     """
     A class to overlay molecules with customizable parameters.
-    """
-    
-    """
-    A class to overlay molecules with customizable parameters.
 
     Attributes
     ----------
@@ -573,6 +569,9 @@ class OverlayMolecules:
     -------
     set_molecules(filenames)
         Opens and reads XYZ files, extracting headers and atomic coordinates.
+
+    add_molecules(filenames)
+    	Add molecules.
 
     plot_overlay()
         Visualizes the superimposed molecular structures in 3D using Plotly.
@@ -672,6 +671,21 @@ class OverlayMolecules:
         self.xyz_format_jsons = open_xyz_files(filenames)
         self.superimposed_jsons = self._superimpose(self.xyz_format_jsons)
 
+    def add_molecules(self, filenames:Iterable|str):
+        '''
+        Opens and reads XYZ files, extracting atomic coordinates.
+
+        Parameters
+        ----------
+        filenames : str or list
+            str : xyz format traj file path
+            list : list of xyz format strings or file paths
+	'''
+	new_xyz_format_jsons = open_xyz_files(filenames)
+	self.xyz_format_jsons.extend(new_xyz_format_jsons)
+	self.superimposed_jsons = self._superimpose(self.xyz_format_jsons)
+	
+	
     def _superimpose(self, xyz_format_jsons):
         """
         Superimposes molecular coordinates based on the configured options.
