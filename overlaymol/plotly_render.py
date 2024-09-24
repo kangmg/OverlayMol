@@ -681,9 +681,9 @@ class OverlayMolecules:
             str : xyz format traj file path
             list : list of xyz format strings or file paths
 	    '''
-	    new_xyz_format_jsons = open_xyz_files(filenames)
-	    self.xyz_format_jsons.extend(new_xyz_format_jsons)
-	    self.superimposed_jsons = self._superimpose(self.xyz_format_jsons)
+        new_xyz_format_jsons = open_xyz_files(filenames)
+        self.xyz_format_jsons.extend(new_xyz_format_jsons)
+        self.superimposed_jsons = self._superimpose(self.xyz_format_jsons)
 	
 	
     def _superimpose(self, xyz_format_jsons):
