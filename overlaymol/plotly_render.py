@@ -9,7 +9,84 @@ from .overlay import open_xyz_files, superimpose
 from collections.abc import Iterable
 
 
-def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements:list=None, exclude_atomic_idx:list=None, cmap:str=None, covalent_radius_percent:float=108., **kwargs):
+def _plot_scale_box(box_half_length: float, unit_bar: bool = True):
+    """
+    Plot scale box and unit bar in 3D visualization.
+    
+    Parameters
+    ----------
+    box_half_length : float
+        Half-length of the scale box.
+    unit_bar : bool, optional
+        Whether to show a 1Å unit bar or the full box length. Default is True.
+    
+    Returns
+    -------
+    list
+        List of go.Scatter3d objects for the scale box and unit bar.
+    """
+    hl = box_half_length  # box half-length
+
+    # Box vertices
+    x_coords = [-hl, hl, hl, -hl, -hl, hl, hl, -hl]
+    y_coords = [-hl, -hl, hl, hl, -hl, -hl, hl, hl]
+    z_coords = [-hl, -hl, -hl, -hl, hl, hl, hl, hl]
+
+    # Define edges by vertex indices
+    edges = [
+        (0, 1), (1, 2), (2, 3), (3, 0),  # Bottom face edges
+        (4, 5), (5, 6), (6, 7), (7, 4),  # Top face edges
+        (0, 4), (1, 5), (2, 6), (3, 7)   # Vertical edges
+    ]
+
+    x_box_lines = []
+    y_box_lines = []
+    z_box_lines = []
+
+    for edge in edges:
+        for vertex in edge:
+            x_box_lines.append(x_coords[vertex])
+            y_box_lines.append(y_coords[vertex])
+            z_box_lines.append(z_coords[vertex])
+        x_box_lines.append(None)
+        y_box_lines.append(None)
+        z_box_lines.append(None)
+
+    box_plots = [
+        # Scaling bar
+        go.Scatter3d(
+            x=[hl, hl],
+            y=[-hl, -hl+1 if unit_bar else +hl],
+            z=[-hl, -hl],
+            mode='lines+text',
+            line=dict(color='red', width=13),
+            text=['1 Å' if unit_bar else f'{np.round(hl*2, 1)} Å'],
+            textposition='top center',
+            textfont=dict(size=12, color='red'),
+            showlegend=False,
+            name='Bar',
+            legendgroup='Box',
+            hoverinfo='text',
+            hovertext='Bar'
+        ),
+        # Box lines
+        go.Scatter3d(
+            x=x_box_lines,
+            y=y_box_lines,
+            z=z_box_lines,
+            mode='lines',
+            line=dict(color='grey', width=4),
+            showlegend=True,
+            name='Box',
+            legendgroup='Box',
+            hoverinfo='text',
+            hovertext='Box'
+        )
+    ]
+    return box_plots
+
+def plot_overlay(xyz_format_jsons: list, colorby: str = "molecule", exclude_elements: list = None, 
+                 exclude_atomic_idx: list = None, cmap: str = None, covalent_radius_percent: float = 108., **kwargs):
     """
     Visualizes molecular structures in 3D using Plotly.
 
@@ -22,149 +99,142 @@ def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements
         - 'coordinate': ndarray, the atomic coordinates with columns for atomic number, x, y, z, and optionally index.
         - 'adjacency_matrix': ndarray, the matrix representing the connectivity of the molecule
         - 'bond_length_table': ndarray, the table of bond lengths with columns | atom_1_idx | atom_2_idx | distance |
-
     colorby : str, optional, default='molecule'
         Specifies how to color the molecules. Options:
         - 'molecule': Color by molecule.
         - 'atom': Color by element.
-	
     exclude_elements : list, optional
         List of element symbols to exclude from visualization. e.g., ['H'] to exclude hydrogen.
-	
     exclude_atomic_idx : list, optional
         List of atomic indices to exclude from visualization. Atomic index starts with 1. e.g. [1, 3, 4]
-	
-	cmap : str or list, optional
-		str : A Plotly colormap name (e.g., 'Viridis', 'Plotly3') used to color the molecules.
-			- Refer to the Plotly documentation : https://plotly.com/python/builtin-colorscales/
-		list : A list of color names or hex codes used for manual coloring (e.g., ['red', 'blue', 'green']).
-			- Refer to the Plotly color options : https://community.plotly.com/t/plotly-colours-list/11730/3
-	
-	covalent_radius_percent : float, optional
-		A percentage value used to scale the covalent radii for determining bonding (default is 108%).
-	
+    cmap : str or list, optional
+        str: A Plotly colormap name (e.g., 'Viridis', 'Plotly3') used to color the molecules.
+        list: A list of color names or hex codes used for manual coloring (e.g., ['red', 'blue', 'green']).
+    covalent_radius_percent : float, optional
+        A percentage value used to scale the covalent radii for determining bonding (default is 108%).
     **kwargs
         Additional keyword arguments for customization:
         - alpha_atoms: float, optional, default=0.55 
-		Opacity of atoms.
+            Opacity of atoms.
         - alpha_bonds: float, optional, default=0.35 
-		Opacity of bonds.
+            Opacity of bonds.
         - atom_scaler: float, optional, default=4e1
-		Scale factor for atom sphere radius.
+            Scale factor for atom sphere radius.
         - bond_scaler: float, optional, default=7e4
-		Scale factor for bond cylinder radius.
+            Scale factor for bond cylinder radius.
         - legend: bool, optional, default=False
-		Whether to show legend.
+            Whether to show legend.
         - show_index: bool, optional, default=False
-		Whether to show atomic indices.
+            Whether to show atomic indices.
         - index_color: str, optional, default='red'
-		Color of atomic indices.
+            Color of atomic indices.
         - index_size: int, optional, default=12
-		Size of atomic indices text.
+            Size of atomic indices text.
         - bgcolor: str, optional, default='black'
-		Background color of the plot.
+            Background color of the plot.
+        - scale_box: bool, optional, default=True
+            Whether to show the scale box.
+        - unit_bar: bool, optional, default=True
+            Whether to show a 1Å unit bar or the full box length.
 
     Returns
     -------
     None
         Displays the 3D plot using Plotly.
     """
-    def _get_colors(cmap:str|list, n:int):
-        """get n size color list from plotly colormap
-        """
+    def _get_colors(cmap: str | list, n: int):
+        """Get n size color list from Plotly colormap."""
         if not cmap:
             cmap = 'Plotly3'
-
-        try: pc.get_colorscale(cmap)
+        try:
+            pc.get_colorscale(cmap)
         except Exception:
-            print("\033[31m[WARNING]\033[0m", f"`{cmap}` is not a valid plotly colormap. Applying default colormap instead.")
+            print("\033[31m[WARNING]\033[0m", f"`{cmap}` is not a valid Plotly colormap. Applying default colormap instead.")
             cmap = 'Plotly3'
-
         if isinstance(cmap, str):
             colors = pc.get_colorscale(cmap)
-            return list(pc.sample_colorscale(colors, list(ratio for ratio in np.linspace(0, 1, n+1)[1:]), colortype='rgb'))
-
+            return list(pc.sample_colorscale(colors, [ratio for ratio in np.linspace(0, 1, n + 1)[1:]], colortype='rgb'))
         if isinstance(cmap, list):
             cyclic_iterator = cycle(cmap)
-            return list(next(cyclic_iterator) for _ in range(n))
+            return [next(cyclic_iterator) for _ in range(n)]
 
-    # set default values
-    alpha_atoms = kwargs.get("alpha_atoms", 0.55) # atoms opacity
-    alpha_bonds = kwargs.get("alpha_bonds", 0.35) # bonds opacity
-    atom_scaler = kwargs.get("atom_scaler", 4e1) # sphere radius for atom view, change exponent
-    bond_scaler = kwargs.get("bond_scaler", 7e4) # cylinder radius for bond view, change exponent
-    legend = kwargs.get("legend", False) # add legend
-    show_index = kwargs.get("show_index", False) # show atomic index
-    index_color = kwargs.get("index_color", 'red') # atomic index color
-    index_size = kwargs.get("index_size", 12) # atomic index size
-    bgcolor = kwargs.get("bgcolor", 'black') # background color
+    # Set default values
+    alpha_atoms = kwargs.get("alpha_atoms", 0.55)  # Atoms opacity
+    alpha_bonds = kwargs.get("alpha_bonds", 0.35)  # Bonds opacity
+    atom_scaler = kwargs.get("atom_scaler", 4e1)   # Sphere radius for atom view
+    bond_scaler = kwargs.get("bond_scaler", 7e4)   # Cylinder radius for bond view
+    legend = kwargs.get("legend", False)           # Show legend
+    show_index = kwargs.get("show_index", False)   # Show atomic index
+    index_color = kwargs.get("index_color", 'red') # Atomic index color
+    index_size = kwargs.get("index_size", 12)      # Atomic index size
+    bgcolor = kwargs.get("bgcolor", 'black')       # Background color
+    scale_box = kwargs.get("scale_box", True)      # Show scale box
+    unit_bar = kwargs.get("unit_bar", True)        # Show unit bar
 
-    # copy xyz_format_jsons
+    # Copy xyz_format_jsons
     _xyz_format_jsons = deepcopy(xyz_format_jsons)
 
-    # plotly figure
+    # Plotly figure
     fig = go.Figure()
 
-    # exclude atoms
+    # Exclude atoms
     if exclude_atomic_idx:
-        # `exclude_atomic_idx` option expects that each coordinates has the same order of atoms
-        symbols_list = list(map(lambda xyz_json : xyz_json.get("coordinate")[:, 0], _xyz_format_jsons))
+        symbols_list = [xyz_json.get("coordinate")[:, 0] for xyz_json in _xyz_format_jsons]
         if not np.all(np.array(symbols_list) == symbols_list[0]):
             print("\033[31m[WARNING]\033[0m", "`exclude_atomic_idx` option expects that each coordinates has the same order of atoms")
-        # atomic indice start with 1
-        if 0 in exclude_atomic_idx: raise ValueError("atomic indices start with 1, but 0 was found in `exclude_atomic_idx`")
-
-        # reset atomic indice
-        exclude_atomic_idx = list(idx - 1 for idx in exclude_atomic_idx)
-
-        # check if atomic index is out of range
-        if any(max(exclude_atomic_idx) > len(_xyz_format_jsons[mol_idx]["coordinate"]) for mol_idx in range(len(_xyz_format_jsons))):
-            raise ValueError(f"Atomic index {max(exclude_atomic_idx)} provided in `exclude_atomic_idx` is out of range in your molecule.")
-
+        if 0 in exclude_atomic_idx:
+            raise ValueError("atomic indices start with 1, but 0 was found in `exclude_atomic_idx`")
+        exclude_atomic_idx = [idx - 1 for idx in exclude_atomic_idx]  # Reset atomic indices
         for mol_idx in range(len(_xyz_format_jsons)):
-            # filter the atom in `exclude_atomic_idx`
-            atom_filtered_coordinate = list(
-                atomic_coordinate for atomic_idx, atomic_coordinate in enumerate(_xyz_format_jsons[mol_idx]["coordinate"]) if atomic_idx not in exclude_atomic_idx
-                  )
-            # overwrite filtered coordinate
-            _xyz_format_jsons[mol_idx]["coordinate"] = atom_filtered_coordinate
-            # adjust number of atoms : n_atoms
+            atom_filtered_coordinate = [
+                atomic_coordinate for atomic_idx, atomic_coordinate in enumerate(_xyz_format_jsons[mol_idx]["coordinate"])
+                if atomic_idx not in exclude_atomic_idx
+            ]
+            _xyz_format_jsons[mol_idx]["coordinate"] = np.array(atom_filtered_coordinate)
             _xyz_format_jsons[mol_idx]["n_atoms"] = len(atom_filtered_coordinate)
 
-    # exclude elements
+    # Exclude elements
     if exclude_elements:
         for mol_idx in range(len(_xyz_format_jsons)):
-            # filter the element in `exclude_elements`
-            element_filtered_coordinate = list(
-                atomic_coordinate for atomic_coordinate in _xyz_format_jsons[mol_idx]["coordinate"] if atomic_number2element_symbol[atomic_coordinate[0]] not in exclude_elements
-                  )
-            # overwrite filtered coordinate
-            _xyz_format_jsons[mol_idx]["coordinate"] = element_filtered_coordinate
-            # adjust number of atoms : n_atoms
+            element_filtered_coordinate = [
+                atomic_coordinate for atomic_coordinate in _xyz_format_jsons[mol_idx]["coordinate"]
+                if atomic_number2element_symbol[atomic_coordinate[0]] not in exclude_elements
+            ]
+            _xyz_format_jsons[mol_idx]["coordinate"] = np.array(element_filtered_coordinate)
             _xyz_format_jsons[mol_idx]["n_atoms"] = len(element_filtered_coordinate)
 
-
-    # number of molecules
+    # Number of molecules
     num_of_xyz = len(_xyz_format_jsons)
 
-    # max number of atoms
+    # Max number of atoms
     num_atom_xyz = max(len(xyz_jsons["coordinate"]) for xyz_jsons in _xyz_format_jsons)
 
-    # analyze molecular connectivity
+    # Calculate global ranges for all molecular structures
+    all_positions = np.vstack([xyz_json["coordinate"][:, 1:4] for xyz_json in _xyz_format_jsons])
+    range_array = np.array([
+        [np.min(all_positions[:, i]) for i in range(3)],
+        [np.max(all_positions[:, i]) for i in range(3)]
+    ])
+    padding = 0.1
+    if scale_box:
+        half_box_length = np.max(np.abs(range_array)) * 1.3  # Scale box size based on max range
+        max_range = [-half_box_length - padding, half_box_length + padding]
+    else:
+        max_range = [
+            [range_array[0, i] - padding, range_array[1, i] + padding] for i in range(3)
+        ]
+
+    # Analyze molecular connectivity
     xyz2molecular_graph(_xyz_format_jsons, covalent_radius_percent)
 
-    # bond thickness and atom size
+    # Bond thickness and atom size
     bond_thickness = np.maximum(np.log10(bond_scaler / num_atom_xyz) * 2, 1)
     atom_size = np.maximum(np.log10(atom_scaler / num_atom_xyz) * 5, 2)
 
     if colorby == "molecule":
-        # set color palette
         palette = _get_colors(cmap, num_of_xyz)
-
-        # plot atoms & bonds
         for mol_idx in range(len(_xyz_format_jsons)):
             color = palette[mol_idx]
-
             # Add atoms to plot
             fig.add_trace(go.Scatter3d(
                 x=_xyz_format_jsons[mol_idx]["coordinate"][:, 1],
@@ -173,17 +243,12 @@ def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements
                 mode='markers+text',
                 opacity=alpha_atoms,
                 marker=dict(size=atom_size, color=color),
-                #name=_xyz_format_jsons[mol_idx]["name"]
                 name=f'{_xyz_format_jsons[mol_idx]["name"]} atoms',
                 text=_xyz_format_jsons[mol_idx]["coordinate"][:, 4].astype(int).astype(str) if show_index else None,
                 textposition="top center" if show_index else None,
-                textfont=dict(
-                    size=index_size,
-                    color=index_color
-                    ) if show_index else None,
-                ))
-            legend_group_namegroup = _xyz_format_jsons[mol_idx]["name"]
-
+                textfont=dict(size=index_size, color=index_color) if show_index else None,
+            ))
+            legend_group_name = _xyz_format_jsons[mol_idx]["name"]
             # Add bonds to plot
             bonds = _xyz_format_jsons[mol_idx]["bond_length_table"][:, :2]
             first_bond = True
@@ -198,27 +263,21 @@ def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements
                     mode='lines',
                     opacity=alpha_bonds,
                     line=dict(width=bond_thickness, color=color),
-                    legendgroup=legend_group_namegroup,
-                    name=f"{legend_group_namegroup} bonds",
+                    legendgroup=legend_group_name,
+                    name=f"{legend_group_name} bonds",
                     showlegend=True if first_bond else False
                 ))
                 first_bond = False
 
-
     elif colorby == "atom":
-        # `legend` is only working when colorby='molecule'.
-        if legend: print("\033[31m[WARNING]\033[0m", f"`legend`=True is not a applicable when colorby='atom'.")
-        if show_index: print("\033[31m[WARNING]\033[0m", f"`show_indice`=True is not a applicable when colorby='atom'.")
-
-        # plot atoms
-        all_coordinates = np.vstack(list(json["coordinate"] for json in _xyz_format_jsons))
+        if legend:
+            print("\033[31m[WARNING]\033[0m", f"`legend`=True is not applicable when colorby='atom'.")
+        if show_index:
+            print("\033[31m[WARNING]\033[0m", f"`show_index`=True is not applicable when colorby='atom'.")
+        all_coordinates = np.vstack([json["coordinate"] for json in _xyz_format_jsons])
         elements = set(all_coordinates[:, 0].astype(int))
-
-        # plot element-wise
         for element in elements:
             element_coordinates = all_coordinates[all_coordinates[:, 0].astype(int) == element]
-
-            # Add atoms to plot
             fig.add_trace(go.Scatter3d(
                 x=element_coordinates[:, 1],
                 y=element_coordinates[:, 2],
@@ -228,14 +287,12 @@ def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements
                 marker=dict(size=atom_size, color=atomic_number2hex[element]),
                 showlegend=False
             ))
-
-        # plot bonds
         for mol_idx in range(len(_xyz_format_jsons)):
             bonds = _xyz_format_jsons[mol_idx]["bond_length_table"][:, :2]
             for bond in bonds:
-                bond = bond.astype(int) - 1 # internally idx start with 0
-                atom_1_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:][bond[0]]
-                atom_2_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:][bond[1]]
+                bond = bond.astype(int) - 1
+                atom_1_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4][bond[0]]
+                atom_2_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4][bond[1]]
                 fig.add_trace(go.Scatter3d(
                     x=[atom_1_coord[0], atom_2_coord[0]],
                     y=[atom_1_coord[1], atom_2_coord[1]],
@@ -246,182 +303,193 @@ def plot_overlay(xyz_format_jsons:list, colorby:str="molecule", exclude_elements
                     showlegend=False
                 ))
 
-
     else:
-        raise ValueError(f"Unsupported colorby : {colorby}")
+        raise ValueError(f"Unsupported colorby: {colorby}")
 
-    # figure layout setting
+    # Add scale box if enabled
+    if scale_box:
+        box_plots = _plot_scale_box(box_half_length=half_box_length, unit_bar=unit_bar)
+        for plot in box_plots:
+            fig.add_trace(plot)
+
+    # Figure layout setting
     fig.update_layout(
         scene=dict(
-            xaxis=dict(visible=False),
-            yaxis=dict(visible=False),
-            zaxis=dict(visible=False),
-            aspectmode='data',
+            xaxis=dict(range=max_range if scale_box else max_range[0], visible=False),
+            yaxis=dict(range=max_range if scale_box else max_range[1], visible=False),
+            zaxis=dict(range=max_range if scale_box else max_range[2], visible=False),
+            aspectmode='manual' if scale_box else 'data',
             camera_projection=dict(type='orthographic'),
-            #aspectratio=dict(x=1, y=1, z=1)
+            aspectratio=dict(x=1, y=1, z=1) if scale_box else None
         ),
         showlegend=True if legend else False,
         paper_bgcolor=bgcolor
     )
 
+
+
     fig.show()
 
 
-
-
-def plot_animation(xyz_format_jsons:list, colorby:str="molecule", exclude_elements:list=None, exclude_atomic_idx:list=None, cmap:str=None, covalent_radius_percent:float=108., **kwargs):
+def plot_animation(xyz_format_jsons: list, colorby: str = "molecule", exclude_elements: list = None, 
+                  exclude_atomic_idx: list = None, cmap: str = None, covalent_radius_percent: float = 108., **kwargs):
     """
-    Description
-    -----------
-    Visualization of molecular structures in 3D using Plotly.
+    Visualization of molecular structures in 3D using Plotly with animation.
 
     Parameters
     ----------
-    - xyz_format_jsons : list
-        list of json format xyz
-
-    - colorby : str
-        supported options : ["molecule", "atom"]
-        - molecule  : color by molecule
-        - atom      : color by atom
-
-    - exclude_elements : list
-        list of elements to exclude from visualization. e.g. ["H"]
-
-    - exclude_atomic_idx : list
-        list of atoms to exclude from visualization. e.g. [1, 3, 4]
-
-    - cmap : str or list
-        plotly colormap to use for coloring.
-        Supported options : [  ]
-        Refer)
-        https://plotly.com/python/builtin-colorscales/
-
-        or
-
-        iterable color list
-        e.g. ['red', 'blue', 'green']
-        Refer)
-        https://community.plotly.com/t/plotly-colours-list/11730/3
-
-
-    - covalent_radius_percent : float
-        resize covalent radii by this percent
-        default : 108%
+    xyz_format_jsons : list
+        List of dictionaries where each dictionary contains molecular data in JSON format with keys:
+        - 'name': str, the name or identifier for the molecule.
+        - 'n_atoms': int, the number of atoms in the molecule.
+        - 'coordinate': ndarray, the atomic coordinates with columns for atomic number, x, y, z, and optionally index.
+        - 'adjacency_matrix': ndarray, the matrix representing the connectivity of the molecule.
+        - 'bond_length_table': ndarray, the table of bond lengths with columns | atom_1_idx | atom_2_idx | distance |
+    colorby : str, optional, default='molecule'
+        Specifies how to color the molecules. Options:
+        - 'molecule': Color by molecule.
+        - 'atom': Color by element.
+    exclude_elements : list, optional
+        List of element symbols to exclude from visualization. e.g., ['H']
+    exclude_atomic_idx : list, optional
+        List of atomic indices to exclude from visualization. Atomic index starts with 1. e.g. [1, 3, 4]
+    cmap : str or list, optional
+        str: A Plotly colormap name (e.g., 'Viridis', 'Plotly3') used to color the molecules.
+        list: A list of color names or hex codes used for manual coloring (e.g., ['red', 'blue', 'green']).
+    covalent_radius_percent : float, optional
+        A percentage value used to scale the covalent radii for determining bonding (default is 108%).
+    **kwargs
+        Additional keyword arguments for customization:
+        - alpha_atoms: float, optional, default=0.55
+            Opacity of atoms.
+        - alpha_bonds: float, optional, default=0.55
+            Opacity of bonds.
+        - atom_scaler: float, optional, default=2e1
+            Scale factor for atom sphere radius.
+        - bond_scaler: float, optional, default=1e4
+            Scale factor for bond cylinder radius.
+        - legend: bool, optional, default=False
+            Whether to show legend.
+        - scale_box: bool, optional, default=True
+            Whether to show the scale box.
+        - unit_bar: bool, optional, default=True
+            Whether to show a 1Å unit bar or the full box length.
 
     Returns
     -------
+    None
+        Displays the 3D animated plot using Plotly.
     """
     STABLE = False
     if not STABLE:
         print("\033[31m[WARNING]\033[0m", f"plot_animation function is now testing. It is not working perfectly.")
 
-    def _get_colors(cmap:str|list, n:int):
-        """get n size color list from plotly colormap
-        """
+    def _get_colors(cmap: str | list, n: int):
+        """Get n size color list from Plotly colormap."""
         if not cmap:
             cmap = 'Plotly3'
-
-        try: pc.get_colorscale(cmap)
+        try:
+            pc.get_colorscale(cmap)
         except Exception:
-            print("\033[31m[WARNING]\033[0m", f"`{cmap}` is not a valid plotly colormap. Applying default colormap instead.")
+            print("\033[31m[WARNING]\033[0m", f"`{cmap}` is not a valid Plotly colormap. Applying default colormap instead.")
             cmap = 'Plotly3'
-
         if isinstance(cmap, str):
             colors = pc.get_colorscale(cmap)
-            return list(pc.sample_colorscale(colors, list(ratio for ratio in np.linspace(0, 1, n+1)[1:]), colortype='rgb'))
-
+            return list(pc.sample_colorscale(colors, [ratio for ratio in np.linspace(0, 1, n + 1)[1:]], colortype='rgb'))
         if isinstance(cmap, list):
             cyclic_iterator = cycle(cmap)
-            return list(next(cyclic_iterator) for _ in range(n))
+            return [next(cyclic_iterator) for _ in range(n)]
 
-    # set default values
-    alpha_atoms = kwargs.get("alpha_atoms", 0.55) # atoms opacity
-    alpha_bonds = kwargs.get("alpha_bonds", 0.55) # bonds opacity
-    atom_scaler = kwargs.get("atom_scaler", 2e1) # sphere radius for atom view, change exponent
-    bond_scaler = kwargs.get("bond_scaler", 1e4) # cylinder radius for bond view, change exponent
-    legend = kwargs.get("legend", False) # add legend
+    # Set default values
+    alpha_atoms = kwargs.get("alpha_atoms", 0.55)
+    alpha_bonds = kwargs.get("alpha_bonds", 0.55)
+    atom_scaler = kwargs.get("atom_scaler", 2e1)
+    bond_scaler = kwargs.get("bond_scaler", 1e4)
+    legend = kwargs.get("legend", False)
+    scale_box = kwargs.get("scale_box", True)
+    unit_bar = kwargs.get("unit_bar", True)
 
-    # copy xyz_format_jsons
+    # Validate input
+    if not xyz_format_jsons:
+        raise ValueError("xyz_format_jsons is empty. Please provide valid molecular data.")
+
+    # Copy xyz_format_jsons
     _xyz_format_jsons = deepcopy(xyz_format_jsons)
 
-    # plotly figure
+    # Plotly figure
     fig = go.Figure()
 
-    # exclude atoms
+    # Exclude atoms
     if exclude_atomic_idx:
-        # `exclude_atomic_idx` option expects that each coordinates has the same order of atoms
-        symbols_list = list(map(lambda xyz_json : xyz_json.get("coordinate")[:, 0], _xyz_format_jsons))
+        symbols_list = [xyz_json.get("coordinate")[:, 0] for xyz_json in _xyz_format_jsons]
         if not np.all(np.array(symbols_list) == symbols_list[0]):
             print("\033[31m[WARNING]\033[0m", "`exclude_atomic_idx` option expects that each coordinates has the same order of atoms")
-        # atomic indice start with 1
-        if 0 in exclude_atomic_idx: raise ValueError("atomic indices start with 1, but 0 was found in `exclude_atomic_idx`")
-
-        # reset atomic indice
-        exclude_atomic_idx = list(idx - 1 for idx in exclude_atomic_idx)
-
-        # check if atomic index is out of range
-        if any(max(exclude_atomic_idx) > len(_xyz_format_jsons[mol_idx]["coordinate"]) for mol_idx in range(len(_xyz_format_jsons))):
-            raise ValueError(f"Atomic index {max(exclude_atomic_idx)} provided in `exclude_atomic_idx` is out of range in your molecule.")
-
+        if 0 in exclude_atomic_idx:
+            raise ValueError("atomic indices start with 1, but 0 was found in `exclude_atomic_idx`")
+        exclude_atomic_idx = [idx - 1 for idx in exclude_atomic_idx]
         for mol_idx in range(len(_xyz_format_jsons)):
-            # filter the atom in `exclude_atomic_idx`
-            atom_filtered_coordinate = list(
-                atomic_coordinate for atomic_idx, atomic_coordinate in enumerate(_xyz_format_jsons[mol_idx]["coordinate"]) if atomic_idx not in exclude_atomic_idx
-                  )
-            # overwrite filtered coordinate
-            _xyz_format_jsons[mol_idx]["coordinate"] = atom_filtered_coordinate
-            # adjust number of atoms : n_atoms
+            atom_filtered_coordinate = [
+                atomic_coordinate for atomic_idx, atomic_coordinate in enumerate(_xyz_format_jsons[mol_idx]["coordinate"])
+                if atomic_idx not in exclude_atomic_idx
+            ]
+            _xyz_format_jsons[mol_idx]["coordinate"] = np.array(atom_filtered_coordinate)
             _xyz_format_jsons[mol_idx]["n_atoms"] = len(atom_filtered_coordinate)
 
-    # exclude elements
+    # Exclude elements
     if exclude_elements:
         for mol_idx in range(len(_xyz_format_jsons)):
-            # filter the element in `exclude_elements`
-            element_filtered_coordinate = list(
-                atomic_coordinate for atomic_coordinate in _xyz_format_jsons[mol_idx]["coordinate"] if atomic_number2element_symbol[atomic_coordinate[0]] not in exclude_elements
-                  )
-            # overwrite filtered coordinate
-            _xyz_format_jsons[mol_idx]["coordinate"] = element_filtered_coordinate
-            # adjust number of atoms : n_atoms
+            element_filtered_coordinate = [
+                atomic_coordinate for atomic_coordinate in _xyz_format_jsons[mol_idx]["coordinate"]
+                if atomic_number2element_symbol[atomic_coordinate[0]] not in exclude_elements
+            ]
+            _xyz_format_jsons[mol_idx]["coordinate"] = np.array(element_filtered_coordinate)
             _xyz_format_jsons[mol_idx]["n_atoms"] = len(element_filtered_coordinate)
 
+    # Number of molecules
+    num_of_xyz = len(_xyz_format_jsons)
 
-    # 모든 분자 구조에 대한 전체 범위 계산
-    all_coords = np.vstack([xyz["coordinate"][:, 1:] for xyz in _xyz_format_jsons])
-    x_range = [np.min(all_coords[:, 0]), np.max(all_coords[:, 0])]
-    y_range = [np.min(all_coords[:, 1]), np.max(all_coords[:, 1])]
-    z_range = [np.min(all_coords[:, 2]), np.max(all_coords[:, 2])]
+    # Max number of atoms
+    num_atom_xyz = max(len(xyz_jsons["coordinate"]) for xyz_jsons in _xyz_format_jsons)
 
-    # 약간의 여유 추가
+    # Calculate global ranges for all molecular structures
+    try:
+        all_positions = np.vstack([xyz_json["coordinate"][:, 1:4] for xyz_json in _xyz_format_jsons])
+        if all_positions.size == 0:
+            raise ValueError("No valid coordinates found after filtering.")
+        range_array = np.array([
+            [np.min(all_positions[:, i]) for i in range(3)],
+            [np.max(all_positions[:, i]) for i in range(3)]
+        ])
+    except Exception as e:
+        raise ValueError(f"Failed to calculate coordinate ranges: {str(e)}")
+
     padding = 0.1
-    x_range = [x_range[0] - padding, x_range[1] + padding]
-    y_range = [y_range[0] - padding, y_range[1] + padding]
-    z_range = [z_range[0] - padding, z_range[1] + padding]
+    if scale_box:
+        half_box_length = np.max(np.abs(range_array)) * 1.3
+        max_range = [-half_box_length - padding, half_box_length + padding]
+    else:
+        max_range = [
+            [range_array[0, 0] - padding, range_array[1, 0] + padding],  # x
+            [range_array[0, 1] - padding, range_array[1, 1] + padding],  # y
+            [range_array[0, 2] - padding, range_array[1, 2] + padding]   # z
+        ]
 
-    # 프레임 리스트를 저장할 변수
+    # Analyze molecular connectivity
+    xyz2molecular_graph(_xyz_format_jsons, covalent_radius_percent)
+
+    # Bond thickness and atom size
+    bond_thickness = np.maximum(np.log10(bond_scaler / num_atom_xyz) * 2, 1)
+    atom_size = np.maximum(np.log10(atom_scaler / num_atom_xyz) * 5, 2)
+
+    # Frame list to store animation frames
     frames = []
 
     if colorby == "molecule":
-        # number of molecules
-        num_of_xyz = len(_xyz_format_jsons)
-        # max number of atoms
-        num_atom_xyz = max(len(xyz_jsons["coordinate"]) for xyz_jsons in _xyz_format_jsons)
-
-        # set color palette
         palette = _get_colors(cmap, num_of_xyz)
-
-        # analyze molecular connectivity
-        xyz2molecular_graph(_xyz_format_jsons, covalent_radius_percent)
-
-
-        # 각 분자에 대해 프레임 생성
         for mol_idx in range(len(_xyz_format_jsons)):
             frame_data = []
             color = palette[mol_idx]
-
-            # 원자 추가
-            atom_size = np.maximum(np.log10(atom_scaler / num_atom_xyz) * 5, 2)
+            # Add atoms
             frame_data.append(go.Scatter3d(
                 x=_xyz_format_jsons[mol_idx]["coordinate"][:, 1],
                 y=_xyz_format_jsons[mol_idx]["coordinate"][:, 2],
@@ -431,19 +499,16 @@ def plot_animation(xyz_format_jsons:list, colorby:str="molecule", exclude_elemen
                 marker=dict(size=atom_size, color=color),
                 name=f'{_xyz_format_jsons[mol_idx]["name"]} atoms'
             ))
-
-            # 결합 추가
+            # Add bonds
             bonds = _xyz_format_jsons[mol_idx]["bond_length_table"][:, :2]
-            bond_thickness = np.maximum(np.log10(bond_scaler / num_atom_xyz) * 2, 1)
             bond_x, bond_y, bond_z = [], [], []
             for bond in bonds:
                 bond = bond.astype(int) - 1
-                atom_1_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:][bond[0]]
-                atom_2_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:][bond[1]]
+                atom_1_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4][bond[0]]
+                atom_2_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4][bond[1]]
                 bond_x.extend([atom_1_coord[0], atom_2_coord[0], None])
                 bond_y.extend([atom_1_coord[1], atom_2_coord[1], None])
                 bond_z.extend([atom_1_coord[2], atom_2_coord[2], None])
-
             frame_data.append(go.Scatter3d(
                 x=bond_x, y=bond_y, z=bond_z,
                 mode='lines',
@@ -451,14 +516,62 @@ def plot_animation(xyz_format_jsons:list, colorby:str="molecule", exclude_elemen
                 line=dict(width=bond_thickness, color=color),
                 name=f"{_xyz_format_jsons[mol_idx]['name']} bonds"
             ))
-
-            # 프레임 추가
+            # Add scale box if enabled
+            if scale_box:
+                frame_data.extend(_plot_scale_box(box_half_length=half_box_length, unit_bar=unit_bar))
             frames.append(go.Frame(data=frame_data, name=str(mol_idx)))
 
-        # 초기 프레임 설정
-        fig.add_traces(frames[0].data)
+    elif colorby == "atom":
+        if legend:
+            print("\033[31m[WARNING]\033[0m", f"`legend`=True is not applicable when colorby='atom'.")
+        for mol_idx in range(len(_xyz_format_jsons)):
+            frame_data = []
+            # Add atoms by element
+            elements = set(_xyz_format_jsons[mol_idx]["coordinate"][:, 0].astype(int))
+            for element in elements:
+                element_coordinates = _xyz_format_jsons[mol_idx]["coordinate"][
+                    _xyz_format_jsons[mol_idx]["coordinate"][:, 0].astype(int) == element
+                ]
+                frame_data.append(go.Scatter3d(
+                    x=element_coordinates[:, 1],
+                    y=element_coordinates[:, 2],
+                    z=element_coordinates[:, 3],
+                    mode='markers',
+                    opacity=alpha_atoms,
+                    marker=dict(size=atom_size, color=atomic_number2hex[element]),
+                    name=f'Element {atomic_number2element_symbol[element]}',
+                    showlegend=False
+                ))
+            # Add bonds
+            bonds = _xyz_format_jsons[mol_idx]["bond_length_table"][:, :2]
+            bond_x, bond_y, bond_z = [], [], []
+            for bond in bonds:
+                bond = bond.astype(int) - 1
+                atom_1_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4][bond[0]]
+                atom_2_coord = _xyz_format_jsons[mol_idx]["coordinate"][:, 1:4][bond[1]]
+                bond_x.extend([atom_1_coord[0], atom_2_coord[0], None])
+                bond_y.extend([atom_1_coord[1], atom_2_coord[1], None])
+                bond_z.extend([atom_1_coord[2], atom_2_coord[2], None])
+            frame_data.append(go.Scatter3d(
+                x=bond_x, y=bond_y, z=bond_z,
+                mode='lines',
+                opacity=alpha_bonds,
+                line=dict(width=bond_thickness, color='gray'),
+                name=f"{_xyz_format_jsons[mol_idx]['name']} bonds",
+                showlegend=False
+            ))
+            # Add scale box if enabled
+            if scale_box:
+                frame_data.extend(_plot_scale_box(box_half_length=half_box_length, unit_bar=unit_bar))
+            frames.append(go.Frame(data=frame_data, name=str(mol_idx)))
 
-    # 레이아웃 설정
+    else:
+        raise ValueError(f"Unsupported colorby: {colorby}")
+
+    # Set initial frame
+    fig.add_traces(frames[0].data)
+
+    # Layout settings
     fig.frames = frames
     fig.update_layout(
         updatemenus=[{
@@ -501,17 +614,18 @@ def plot_animation(xyz_format_jsons:list, colorby:str="molecule", exclude_elemen
             'steps': [{'args': [[f.name], {'frame': {'duration': 300, 'redraw': True}, 'mode': 'immediate', 'transition': {'duration': 300}}], 'label': str(k), 'method': 'animate'} for k, f in enumerate(fig.frames)]
         }],
         scene=dict(
-            xaxis=dict(range=x_range , visible=False),
-            yaxis=dict(range=y_range , visible=False),
-            zaxis=dict(range=z_range , visible=False),
-            aspectmode='data',
+            xaxis=dict(range=max_range if scale_box else max_range[0], visible=False),
+            yaxis=dict(range=max_range if scale_box else max_range[1], visible=False),
+            zaxis=dict(range=max_range if scale_box else max_range[2], visible=False),
+            aspectmode='manual' if scale_box else 'data',
             camera_projection=dict(type='orthographic'),
-            aspectratio=dict(x=1, y=1, z=1),
+            aspectratio=dict(x=1, y=1, z=1) if scale_box else None
         ),
         showlegend=True if legend else False
     )
-    
+
     fig.show()
+
 
 class Parameters:
     """
@@ -605,6 +719,7 @@ class OverlayMolecules:
         "exclude_elements": None,
         "exclude_atomic_idx": None,
         "covalent_radius_percent": 108.,
+        "scaled_box": True,
 
         # plot setting
         "alpha_atoms": 0.55,
@@ -723,7 +838,9 @@ class OverlayMolecules:
             bgcolor=self.parameters.bgcolor,
             show_index=self.parameters.show_index,
             index_color=self.parameters.index_color,
-            index_size=self.parameters.index_size
+            index_size=self.parameters.index_size,
+            scaled_box=self.parameters.scaled_box
+
             )
         
     def plot_animation(self):
@@ -743,5 +860,6 @@ class OverlayMolecules:
             alpha_bonds=self.parameters.alpha_bonds,
             atom_scaler=self.parameters.atom_scaler,
             bond_scaler=self.parameters.bond_scaler,
-            legend=self.parameters.legend
+            legend=self.parameters.legend,
+            scaled_box=self.parameters.scaled_box,
         )
