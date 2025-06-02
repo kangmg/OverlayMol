@@ -71,6 +71,125 @@ def align_xyz(vec1, vec2, coord)->ndarray:
     # Apply the rotation matrix to the coordinates
     return np.dot(coord, rotmatrix)
 
+from ase import Atoms
+from ase.data import atomic_numbers
+import numpy as np
+from typing import Union, List
+
+def from_ase_atoms(ase_obj: Union[Atoms, List[Atoms], List[dict]], name: str = "molecule") -> List[dict]:
+    """
+    Converts an ASE Atoms object, a list of Atoms objects, or a list of dictionaries with names and Atoms
+    to a list of JSON-like dictionaries compatible with xyz_format_to_json.
+
+    Parameters
+    ----------
+    ase_obj : ase.Atoms, List[ase.Atoms], or List[dict]
+        - A single ASE Atoms object.
+        - A list of ASE Atoms objects (names assigned as "1", "2", "3", ...).
+        - A list of dictionaries, each with:
+            - 'name': str, the molecule name.
+            - 'atoms': ase.Atoms, the ASE Atoms object.
+    name : str, optional
+        The name of the molecule for a single Atoms object. Defaults to "molecule".
+        Ignored for list inputs (uses indices or dictionary names).
+
+    Returns
+    -------
+    xyz_jsons : List[dict]
+        A list of dictionaries, each containing:
+        - 'name': str, molecule name (from input, index, or default).
+        - 'n_atoms': int, number of atoms.
+        - 'coordinate': ndarray, array of shape (n_atoms, 5) with columns [atomic_number, x, y, z, index].
+
+    Usage
+    -----
+    >>> from ase import Atoms
+    >>> # Single molecule
+    >>> atoms = Atoms(symbols=['H', 'H'], positions=[[0.0, 0.0, 0.7], [0.0, 0.0, 0.0]])
+    >>> result = from_ase(atoms, name='H2')
+    >>> print(result)
+    [{'name': 'H2', 'n_atoms': 2, 'coordinate': array([[1., 0., 0., 0.7, 1.],
+                                                       [1., 0., 0., 0.0, 2.]])}]
+    >>>
+    >>> # List of Atoms objects
+    >>> atoms_list = [
+    >>>     Atoms(symbols=['H', 'H'], positions=[[0.0, 0.0, 0.7], [0.0, 0.0, 0.0]]),
+    >>>     Atoms(symbols=['O', 'H', 'H'], positions=[[0.0, 0.0, 0.0], [0.757, 0.586, 0.0], [-0.757, 0.586, 0.0]])
+    >>> ]
+    >>> result = from_ase(atoms_list)
+    >>> print(result)
+    [{'name': '1', 'n_atoms': 2, 'coordinate': array([[1., 0., 0., 0.7, 1.],
+                                                      [1., 0., 0., 0.0, 2.]])},
+     {'name': '2', 'n_atoms': 3, 'coordinate': array([[8.,  0.   ,  0.   ,  0.   ,  1.],
+                                                      [1.,  0.757,  0.586,  0.   ,  2.],
+                                                      [1., -0.757,  0.586,  0.   ,  3.]])}]
+    >>>
+    >>> # List of dictionaries
+    >>> dict_list = [
+    >>>     {'name': 'H2', 'atoms': Atoms(symbols=['H', 'H'], positions=[[0.0, 0.0, 0.7], [0.0, 0.0, 0.0]])},
+    >>>     {'name': 'H2O', 'atoms': Atoms(symbols=['O', 'H', 'H'], positions=[[0.0, 0.0, 0.0], [0.757, 0.586, 0.0], [-0.757, 0.586, 0.0]])}
+    >>> ]
+    >>> result = from_ase(dict_list)
+    >>> print(result)
+    [{'name': 'H2', 'n_atoms': 2, 'coordinate': array([[1., 0., 0., 0.7, 1.],
+                                                       [1., 0., 0., 0.0, 2.]])},
+     {'name': 'H2O', 'n_atoms': 3, 'coordinate': array([[8.,  0.   ,  0.   ,  0.   ,  1.],
+                                                        [1.,  0.757,  0.586,  0.   ,  2.],
+                                                        [1., -0.757,  0.586,  0.   ,  3.]])}]
+    """
+    def _convert_single_atoms(atoms: Atoms, name: str, index: int = None) -> dict:
+        # Get number of atoms
+        n_atoms = len(atoms)
+        
+        # Get atomic numbers and positions
+        atomic_numbers = atoms.get_atomic_numbers()
+        positions = atoms.get_positions()
+        
+        # Create index column (1-based indexing)
+        indices = np.arange(1, n_atoms + 1).reshape(-1, 1)
+        
+        # Combine atomic numbers, positions, and indices into a single array
+        coordinates = np.hstack([
+            atomic_numbers.reshape(-1, 1),
+            positions,
+            indices
+        ])
+        
+        # Create JSON-like dictionary
+        xyz_json = {
+            "name": name if name and index is None else str(index) if index is not None else "molecule",
+            "n_atoms": n_atoms,
+            "coordinate": coordinates.astype(float)
+        }
+        
+        return xyz_json
+
+    # Handle single Atoms object
+    if isinstance(ase_obj, Atoms):
+        return [_convert_single_atoms(ase_obj, name)]
+    
+    # Handle list of Atoms objects
+    elif isinstance(ase_obj, (list, tuple)) and all(isinstance(item, Atoms) for item in ase_obj):
+        return [
+            _convert_single_atoms(atoms, "", idx + 1)
+            for idx, atoms in enumerate(ase_obj)
+        ]
+    
+    # Handle list of dictionaries
+    elif isinstance(ase_obj, (list, tuple)) and all(
+        isinstance(item, dict) and "name" in item and "atoms" in item and isinstance(item["atoms"], Atoms)
+        for item in ase_obj
+    ):
+        return [
+            _convert_single_atoms(item["atoms"], item["name"])
+            for item in ase_obj
+        ]
+    
+    else:
+        raise TypeError(
+            "ase_obj must be an ASE Atoms object, a list of Atoms objects, "
+            "or a list of dictionaries with 'name' and 'atoms' keys"
+        )
 
 def xyz_format_to_json(xyz_coord:str|dict)->dict:
     """
