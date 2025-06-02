@@ -15,7 +15,8 @@ setup(
     install_requires=[
         "matplotlib",
         "plotly",
-        "numpy"
+        "numpy",
+        "ase"
     ],
     classifiers=[ 
         'Programming Language :: Python :: 3',
