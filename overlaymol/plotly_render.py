@@ -7,6 +7,7 @@ from .overlay import xyz2molecular_graph
 from .data import atomic_number2element_symbol, atomic_number2hex
 from .overlay import open_xyz_files, superimpose, from_ase_atoms
 from collections.abc import Iterable
+from typing import Union, List
 
 
 def _plot_scale_box(box_half_length: float, unit_bar: bool = True):
