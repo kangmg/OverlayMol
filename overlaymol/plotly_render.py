@@ -5,7 +5,7 @@ import numpy as np
 from copy import deepcopy
 from .overlay import xyz2molecular_graph
 from .data import atomic_number2element_symbol, atomic_number2hex
-from .overlay import open_xyz_files, superimpose
+from .overlay import open_xyz_files, superimpose, from_ase_atoms
 from collections.abc import Iterable
 
 
@@ -754,7 +754,28 @@ class OverlayMolecules:
         # config molecules
         if filenames is not None:
             self.set_molecules(filenames=filenames)
-        
+
+    def from_ase_atoms(self, ase_obj: Union[Atoms, List[Atoms], List[dict]], name: str = "molecule"):
+	"""
+        Converts an ASE Atoms object, a list of Atoms objects, or a list of dictionaries with names and Atoms
+        to a list of JSON-like dictionaries compatible with xyz_format_to_json.
+
+        Parameters
+            ----------
+        ase_obj : ase.Atoms, List[ase.Atoms], or List[dict]
+            - A single ASE Atoms object.
+            - A list of ASE Atoms objects (names assigned as "1", "2", "3", ...).
+            - A list of dictionaries, each with:
+                - 'name': str, the molecule name.
+                - 'atoms': ase.Atoms, the ASE Atoms object.
+        name : str, optional
+            The name of the molecule for a single Atoms object. Defaults to "molecule".
+            Ignored for list inputs (uses indices or dictionary names).
+	"""
+        self.xyz_format_jsons = from_ase_atoms(ase_obj, name)
+        self.superimposed_jsons = self._superimpose(self.xyz_format_jsons)
+
+	
     def set_molecules(self, filenames:Iterable|str):
         '''
         Opens and reads XYZ files, extracting atomic coordinates.
